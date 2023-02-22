@@ -21,6 +21,7 @@ defmodule LogstashLoggerFormatter do
   """
 
   @config Application.get_env(:logger, :logstash_formatter, [])
+  @metadata_processors Keyword.get(@config, :metadata_processors, [])
   @engine Keyword.get(@config, :engine, Jason)
   @lvl_field Keyword.get(@config, :level_field, "level")
   @ts_field Keyword.get(@config, :timestamp_field, "@timestamp")
@@ -41,18 +42,37 @@ defmodule LogstashLoggerFormatter do
   @spec format(Logger.level(), Logger.message(), Logger.Formatter.time(), Keyword.t()) ::
           IO.chardata()
   def format(level, message, timestamp, metadata) do
-    event =
+    metadata =
       metadata
       |> prepare_metadata()
       |> truncate_metadata()
       |> add_extra_fields()
+
+    event =
+      metadata
       |> add_timestamp(timestamp)
       |> add_level(level)
       |> add_message(message)
+      |> apply_processors(metadata)
 
     event = apply(@engine, @encode_fn, [event])
 
     [event, '\n']
+  end
+
+  defp apply_processors(event, metadata) do
+    Enum.reduce(@metadata_processors, {event, metadata}, &do_apply_processor/2)
+  end
+
+  defp do_apply_processor({module, func}, {event, metadata}) do
+    {:ok, metadata} =
+      apply(module, func, [event["level"], event[@msg_field], event[@ts_field], metadata])
+
+    Map.merge(metadata, %{
+      "level" => event["level"],
+      @msg_field => event[@msg_field],
+      @ts_field => event[@ts_field]
+    })
   end
 
   defp prepare_metadata(metadata) do

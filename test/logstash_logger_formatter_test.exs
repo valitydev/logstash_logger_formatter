@@ -85,6 +85,7 @@ defmodule LogstashLoggerFormatterTest do
 
     decoded_message = Jason.decode!(message)
 
+    assert decoded_message["joe"] == "hello, Mike"
     assert decoded_message["message"] == "Test message"
     assert decoded_message["application"] == "logstash_formatter"
     assert decoded_message["otp_application"] == "otp_app"
