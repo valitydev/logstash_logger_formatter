@@ -22,6 +22,7 @@ defmodule LogstashLoggerFormatter do
 
   @config Application.get_env(:logger, :logstash_formatter, [])
   @engine Keyword.get(@config, :engine, Jason)
+  @lvl_field Keyword.get(@config, :level_field, "level")
   @ts_field Keyword.get(@config, :timestamp_field, "@timestamp")
   @msg_field Keyword.get(@config, :message_field, "message")
   @extra_fields Keyword.get(@config, :extra_fields, %{})
@@ -219,7 +220,7 @@ defmodule LogstashLoggerFormatter do
   end
 
   defp add_level(event, level) do
-    Map.put(event, "level", Atom.to_string(level))
+    Map.put(event, @lvl_field, Atom.to_string(level))
   end
 
   defp add_message(event, message) do
